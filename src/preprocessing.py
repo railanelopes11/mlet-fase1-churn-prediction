@@ -21,10 +21,15 @@ def tratar_total_charges(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def preparar_features(df: pd.DataFrame) -> pd.DataFrame:
+def preparar_features(df: pd.DataFrame, encoders: dict | None = None) -> tuple[pd.DataFrame, dict]:
     """
     Remove colunas não usadas no modelo, converte Churn para 0/1 e
     faz encoding das variáveis categóricas.
+
+    Se `encoders` for None (modo treino), cria e ajusta um LabelEncoder
+    por coluna categórica, retornando-os para reuso posterior.
+    Se `encoders` for fornecido (modo inferência), reutiliza os encoders
+    já ajustados no treino, sem reaprender categorias.
     """
     df = df.copy()
     df = df.drop(columns=['customerID'])
@@ -33,8 +38,15 @@ def preparar_features(df: pd.DataFrame) -> pd.DataFrame:
         df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0})
 
     categoricas = df.select_dtypes(include=['object', 'str']).columns
-    le = LabelEncoder()
-    for col in categoricas:
-        df[col] = le.fit_transform(df[col])
 
-    return df
+    if encoders is None:
+        encoders = {}
+        for col in categoricas:
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col])
+            encoders[col] = le
+    else:
+        for col in categoricas:
+            df[col] = encoders[col].transform(df[col])
+
+    return df, encoders
