@@ -18,6 +18,6 @@ def test_preparar_features_remove_customer_id():
         'gender': ['Female'],
         'Churn': ['Yes'],
     })
-    resultado = preparar_features(df)
+    resultado, _ = preparar_features(df)
     assert 'customerID' not in resultado.columns
     assert resultado['Churn'].iloc[0] == 1
