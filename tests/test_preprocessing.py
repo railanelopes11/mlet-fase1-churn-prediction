@@ -18,6 +18,15 @@ def test_preparar_features_remove_customer_id():
         'gender': ['Female'],
         'Churn': ['Yes'],
     })
-    resultado, _ = preparar_features(df)
+    resultado = preparar_features(df)
     assert 'customerID' not in resultado.columns
     assert resultado['Churn'].iloc[0] == 1
+
+
+def test_preparar_features_mantem_categoricas_como_texto():
+    df = pd.DataFrame({
+        'customerID': ['0001-ABC'],
+        'Contract': ['Month-to-month'],
+    })
+    resultado = preparar_features(df)
+    assert resultado['Contract'].iloc[0] == 'Month-to-month'

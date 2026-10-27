@@ -27,18 +27,18 @@ Como **deixar de identificar um cliente que vai cancelar (falso negativo)** cust
 
 ## Resultados
 
-Modelo campeão: **Regressão Logística com `class_weight='balanced'`** + `StandardScaler`.
+Modelo campeão: **Regressão Logística com `class_weight='balanced'`**, dentro de um único `Pipeline` do scikit-learn que também faz o pré-processamento (`OneHotEncoder` nas variáveis categóricas e `StandardScaler` nas numéricas).
 
 | Métrica (conjunto de teste) | Valor |
 |---|---|
-| **Recall (churn)** | **0,80** |
-| Precision (churn) | 0,51 |
-| F1-score (churn) | 0,62 |
+| **Recall (churn)** | **0,79** |
+| Precision (churn) | 0,52 |
+| F1-score (churn) | 0,63 |
 | Acurácia | 0,75 |
 | ROC-AUC | 0,84 |
-| Recall em validação cruzada (5-fold) | 0,80 ± 0,025 |
+| Recall em validação cruzada (5-fold) | 0,80 ± 0,022 |
 
-Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE). Nenhum superou a regressão logística em recall. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
+Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo pré-processamento. Nenhum superou a regressão logística em recall. As métricas do conjunto de teste ficam gravadas em `models/metrics.json`. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
 
 ## Estrutura do projeto
 
@@ -50,14 +50,14 @@ mlet-fase1-churn-prediction/
 │   ├── ml_canvas.md                 # ML Canvas (contexto de negócio e métricas)
 │   └── model_card.md                # Model Card (performance, limitações, vieses)
 ├── models/
-│   ├── churn_model.pkl              # modelo treinado (LogisticRegression)
-│   ├── scaler.pkl                   # StandardScaler ajustado no treino
-│   └── encoders.pkl                 # LabelEncoders das variáveis categóricas
+│   ├── churn_pipeline.pkl           # Pipeline treinado (pré-processamento + LogisticRegression)
+│   └── metrics.json                 # métricas do modelo no conjunto de teste
 ├── notebooks/
 │   ├── EDA + Baseline.ipynb         # Etapa 1: análise exploratória e baseline
 │   └── model_comparison.ipynb       # Etapa 2: comparação de modelos
 ├── src/
 │   ├── api.py                       # API FastAPI (/health e /predict)
+│   ├── pipeline.py                  # Pipeline (OneHotEncoder + StandardScaler + modelo)
 │   ├── predict.py                   # carregamento do modelo e predição
 │   ├── preprocessing.py             # funções de pré-processamento
 │   └── train_final_model.py         # script de treino do modelo final
@@ -145,16 +145,15 @@ Requisição JSON (dados brutos do cliente)
 1. Validação (Pydantic)  ──► campo faltando, tipo errado ou categoria inválida → HTTP 422
         │
         ▼
-2. Pré-processamento (src/preprocessing.py)
+2. Limpeza (src/preprocessing.py)
    • TotalCharges vazio → 0
    • remove customerID
-   • converte categorias em números com os LabelEncoders do treino (models/encoders.pkl)
         │
         ▼
-3. Padronização com o StandardScaler do treino (models/scaler.pkl)
-        │
-        ▼
-4. Regressão Logística (models/churn_model.pkl) → probabilidade de churn
+3. Pipeline treinado (models/churn_pipeline.pkl)
+   • OneHotEncoder nas categóricas e StandardScaler nas numéricas,
+     ajustados só com os dados de treino
+   • Regressão Logística → probabilidade de churn
         │
         ▼
 5. Aplica o limiar 0,5 → churn_previsto = probabilidade ≥ 0,5
@@ -163,7 +162,7 @@ Requisição JSON (dados brutos do cliente)
 Resposta JSON
 ```
 
-Os artefatos do modelo são carregados **uma única vez**, quando a API sobe, e reaproveitados em todas as requisições. O pré-processamento usa exatamente as mesmas funções e os mesmos encoders do treino, então a predição da API é idêntica à do modelo rodado direto em Python. Isso foi conferido nas 7.043 linhas do dataset e é coberto pelo teste `test_predict_bate_com_modelo_direto`.
+O pipeline é carregado **uma única vez**, quando a API sobe, e reaproveitado em todas as requisições. Como o encoding e a escala fazem parte do próprio pipeline salvo, a API aplica exatamente o mesmo pré-processamento do treino, então a predição da API é idêntica à do modelo rodado direto em Python. Isso foi conferido nas 7.043 linhas do dataset e é coberto pelo teste `test_predict_bate_com_modelo_direto`.
 
 ### Endpoints
 
@@ -210,7 +209,7 @@ Os valores aceitos em cada campo categórico estão na tabela da seção [Exempl
 
 ### Como interpretar o resultado
 
-- Com o limiar 0,5, o modelo identifica **cerca de 80% dos clientes que realmente cancelam** (recall 0,80). Em troca, por volta de metade dos clientes marcados como `churn_previsto: true` não cancelaria (precision 0,51). Esse equilíbrio foi escolhido de propósito, porque perder um cliente sem agir custa mais do que fazer um contato a mais.
+- Com o limiar 0,5, o modelo identifica **cerca de 80% dos clientes que realmente cancelam** (recall 0,79). Em troca, por volta de metade dos clientes marcados como `churn_previsto: true` não cancelaria (precision 0,52). Esse equilíbrio foi escolhido de propósito, porque perder um cliente sem agir custa mais do que fazer um contato a mais.
 - Use `probabilidade_churn` principalmente para **ordenar** os clientes por risco. Como o modelo foi treinado com classes balanceadas, o valor tende a superestimar a probabilidade real de cancelamento.
 - O limiar fica na constante `LIMIAR_CHURN` em `src/api.py`. Diminuir o limiar pega mais clientes que cancelariam, mas aumenta os alarmes falsos. Aumentar o limiar faz o contrário. A tabela de trade-off está no [Model Card](docs/model_card.md#54-sensibilidade-ao-limiar-de-decisão).
 - O resultado deve **apoiar** a decisão do time de retenção, não substituí-la. Limitações e vieses conhecidos (por exemplo, idosos são sinalizados com mais frequência) estão no [Model Card](docs/model_card.md#7-possíveis-vieses-e-análise-de-equidade).
@@ -224,7 +223,7 @@ Os valores aceitos em cada campo categórico estão na tabela da seção [Exempl
 
 ## Rodando a API localmente
 
-Os artefatos do modelo já treinado estão em `models/`, então não é preciso treinar antes de subir a API.
+O pipeline já treinado está em `models/churn_pipeline.pkl`, então não é preciso treinar antes de subir a API.
 
 A partir da **raiz do projeto**, com o ambiente virtual ativado:
 
@@ -285,7 +284,7 @@ Resposta:
 [
   {
     "customerID": "7590-VHVEG",
-    "probabilidade_churn": 0.8064,
+    "probabilidade_churn": 0.8346,
     "churn_previsto": true,
     "limiar": 0.5
   }
@@ -340,6 +339,8 @@ Para regerar os artefatos em `models/` a partir do CSV (mesmo pipeline do notebo
 python src/train_final_model.py
 ```
 
+O script treina o pipeline, imprime o classification report do conjunto de teste e grava `models/churn_pipeline.pkl` e `models/metrics.json`. O treino é reprodutível (split e modelo com `random_state=1109`).
+
 ## Rodando os testes
 
 A partir da raiz do projeto, com o ambiente virtual ativado:
@@ -359,7 +360,7 @@ jupyter lab
 ```
 
 - **`notebooks/EDA + Baseline.ipynb`**: análise exploratória (tratamento de `TotalCharges`, taxas de churn por variável, correlações) e baseline com regressão logística.
-- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), e validação cruzada do modelo campeão.
+- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo `Pipeline` de pré-processamento, e validação cruzada do modelo campeão.
 
 ## Documentação
 

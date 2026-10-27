@@ -1,8 +1,10 @@
 """
 Script de treino do modelo final de churn.
 Reproduz o pipeline validado na Etapa 2 (model_comparison.ipynb),
-usando os módulos de pré-processamento, para gerar os artefatos
-finais (modelo, scaler, encoders) de forma reprodutível.
+usando os módulos de pré-processamento e o Pipeline compartilhado
+(src/pipeline.py), para gerar de forma reprodutível o artefato final
+(models/churn_pipeline.pkl) e as métricas no conjunto de teste
+(models/metrics.json).
 """
 
 import json
@@ -12,7 +14,6 @@ import joblib
 from sklearn.metrics import classification_report, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
 
 from preprocessing import carregar_dados, tratar_total_charges, preparar_features
 from pipeline import construir_pipeline
@@ -55,14 +56,7 @@ def main():
     print({k: round(v, 3) if isinstance(v, float) else v for k, v in metrics.items()})
     
     DIR_MODELS.mkdir(exist_ok=True)
-    # scaler = StandardScaler()
-    # X_train_scaled = scaler.fit_transform(X_train)
-
-    # modelo = LogisticRegression(max_iter=1000, random_state=1109, class_weight='balanced')
-    # modelo.fit(X_train_scaled, y_train)
     joblib.dump(pipeline, DIR_MODELS / 'churn_pipeline.pkl')
-    # joblib.dump(scaler, 'models/scaler.pkl')
-    # joblib.dump(encoders, 'models/encoders.pkl')
     (DIR_MODELS / 'metrics.json').write_text(json.dumps(metrics, indent=2))
 
     print("Pipeline e métricas salvas em", DIR_MODELS)

@@ -65,16 +65,14 @@ def test_predict_aceita_total_charges_vazio():
 
 
 def test_predict_bate_com_modelo_direto():
-    import joblib
-    from predict import prever_churn
+    from predict import carregar_modelo, prever_churn
     from preprocessing import carregar_dados, preparar_features, tratar_total_charges
 
     df = tratar_total_charges(carregar_dados('data/Telco-Customer-Churn.csv')).head(200)
-    features, _ = preparar_features(df, joblib.load('models/encoders.pkl'))
+    features = preparar_features(df)
     esperado = prever_churn(
         features.drop(columns=['Churn']),
-        joblib.load('models/churn_model.pkl'),
-        joblib.load('models/scaler.pkl'),
+        carregar_modelo('models/churn_pipeline.pkl'),
     )
 
     payload = df.drop(columns=['Churn']).to_dict(orient='records')
