@@ -20,9 +20,9 @@ RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 DIR_MODELOS = RAIZ_PROJETO / 'models'
 LIMIAR_CHURN = 0.5
 
-modelo = carregar_modelo(DIR_MODELOS / 'churn_model.pkl')
-scaler = carregar_scaler(DIR_MODELOS / 'scaler.pkl')
-encoders = joblib.load(DIR_MODELOS / 'encoders.pkl')
+modelo = carregar_modelo(DIR_MODELOS / 'churn_pipeline.pkl')
+# scaler = carregar_scaler(DIR_MODELOS / 'scaler.pkl')
+# encoders = joblib.load(DIR_MODELOS / 'encoders.pkl')
 
 SimNao = Literal['Yes', 'No']
 SimNaoSemInternet = Literal['Yes', 'No', 'No internet service']
@@ -127,8 +127,8 @@ def predict(clientes: Cliente | list[Cliente]) -> Predicao | list[Predicao]:
 def _prever(clientes: list[Cliente]) -> list[Predicao]:
     df = pd.DataFrame([c.model_dump() for c in clientes])
     df = tratar_total_charges(df)
-    features, _ = preparar_features(df, encoders)
-    probabilidades = prever_churn(features, modelo, scaler)
+    features, _ = preparar_features(df)
+    probabilidades = prever_churn(features, modelo)
 
     return [
         Predicao(

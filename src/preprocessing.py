@@ -21,7 +21,7 @@ def tratar_total_charges(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def preparar_features(df: pd.DataFrame, encoders: dict | None = None) -> tuple[pd.DataFrame, dict]:
+def preparar_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Remove colunas não usadas no modelo, converte Churn para 0/1 e
     faz encoding das variáveis categóricas.
@@ -36,17 +36,19 @@ def preparar_features(df: pd.DataFrame, encoders: dict | None = None) -> tuple[p
 
     if 'Churn' in df.columns:
         df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0})
+        
+    return df
 
     categoricas = df.select_dtypes(include=['object', 'str']).columns
 
-    if encoders is None:
-        encoders = {}
-        for col in categoricas:
-            le = LabelEncoder()
-            df[col] = le.fit_transform(df[col])
-            encoders[col] = le
-    else:
-        for col in categoricas:
-            df[col] = encoders[col].transform(df[col])
+    # if encoders is None:
+    #     encoders = {}
+    #     for col in categoricas:
+    #         le = LabelEncoder()
+    #         df[col] = le.fit_transform(df[col])
+    #         encoders[col] = le
+    # else:
+    #     for col in categoricas:
+    #         df[col] = encoders[col].transform(df[col])
 
-    return df, encoders
+    # return df, encoders
