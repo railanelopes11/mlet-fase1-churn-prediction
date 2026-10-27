@@ -38,7 +38,7 @@ Modelo campeão: **Regressão Logística com `class_weight='balanced'`** + `Stan
 | ROC-AUC | 0,84 |
 | Recall em validação cruzada (5-fold) | 0,80 ± 0,025 |
 
-Também foram testados Random Forest, Árvore de Decisão e MLP (com e sem SMOTE). Nenhum superou a regressão logística em recall. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
+Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE). Nenhum superou a regressão logística em recall. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
 
 ## Estrutura do projeto
 
@@ -359,7 +359,7 @@ jupyter lab
 ```
 
 - **`notebooks/EDA + Baseline.ipynb`**: análise exploratória (tratamento de `TotalCharges`, taxas de churn por variável, correlações) e baseline com regressão logística.
-- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (com e sem SMOTE), e validação cruzada do modelo campeão.
+- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), e validação cruzada do modelo campeão.
 
 ## Documentação
 

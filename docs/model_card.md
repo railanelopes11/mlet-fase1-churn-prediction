@@ -73,7 +73,8 @@ Recall por fold: 0,829 · 0,816 · 0,765 · 0,818 · 0,778 → **média 0,80 ± 
 | Regressão Logística (sem balanceamento) | 0,55 | 0,67 | 0,60 | 0,81 |
 | Random Forest (balanced) | 0,64 | 0,57 | 0,60 | 0,78 |
 | Árvore de Decisão (balanced) | 0,55 | 0,51 | 0,53 | 0,74 |
-| MLP (sem balanceamento) | 0,51 | 0,57 | 0,54 | 0,77 |
+| MLP (sem balanceamento) | 0,53 | 0,56 | 0,54 | 0,76 |
+| MLP (sample_weight balanced) | 0,65 | 0,50 | 0,57 | 0,74 |
 | MLP (SMOTE) | 0,54 | 0,49 | 0,52 | 0,73 |
 
 ### 5.4 Sensibilidade ao limiar de decisão
