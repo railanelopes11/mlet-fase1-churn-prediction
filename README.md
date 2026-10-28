@@ -36,9 +36,9 @@ Modelo campeão: **Regressão Logística com `class_weight='balanced'`**, dentro
 | F1-score (churn) | 0,63 |
 | Acurácia | 0,75 |
 | ROC-AUC | 0,84 |
-| Recall em validação cruzada (5-fold) | 0,80 ± 0,022 |
+| Recall em validação cruzada (5-fold, treino) | 0,805 ± 0,027 |
 
-Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo pré-processamento. Nenhum superou a regressão logística em recall. As métricas do conjunto de teste ficam gravadas em `models/metrics.json`. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
+Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo pré-processamento e avaliados nos mesmos 5 folds de validação cruzada. Nenhum superou a regressão logística, nem em recall nem nas métricas independentes de limiar (ROC-AUC e PR-AUC). As métricas do conjunto de teste ficam gravadas em `models/metrics.json` e os resultados da validação cruzada de todos os modelos em `models/cv_results.csv`. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
 
 ## Estrutura do projeto
 
@@ -51,7 +51,8 @@ mlet-fase1-churn-prediction/
 │   └── model_card.md                # Model Card (performance, limitações, vieses)
 ├── models/
 │   ├── churn_pipeline.pkl           # Pipeline treinado (pré-processamento + LogisticRegression)
-│   └── metrics.json                 # métricas do modelo no conjunto de teste
+│   ├── metrics.json                 # métricas do modelo no conjunto de teste
+│   └── cv_results.csv               # validação cruzada de todos os modelos comparados
 ├── notebooks/
 │   ├── EDA + Baseline.ipynb         # Etapa 1: análise exploratória e baseline
 │   └── model_comparison.ipynb       # Etapa 2: comparação de modelos
@@ -360,7 +361,7 @@ jupyter lab
 ```
 
 - **`notebooks/EDA + Baseline.ipynb`**: análise exploratória (tratamento de `TotalCharges`, taxas de churn por variável, correlações) e baseline com regressão logística.
-- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo `Pipeline` de pré-processamento, e validação cruzada do modelo campeão.
+- **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo `Pipeline` de pré-processamento, validação cruzada de todos os modelos (recall, precision, F1, ROC-AUC e PR-AUC) e curvas ROC/Precisão-Revocação no conjunto de teste.
 
 ## Documentação
 

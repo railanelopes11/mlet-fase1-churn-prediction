@@ -65,23 +65,28 @@ Em termos de negócio: de cada 10 clientes que realmente cancelam, o modelo iden
 
 ### 5.2 Validação cruzada (5-fold estratificado)
 
-Recall por fold: 0,832 · 0,829 · 0,778 · 0,802 · 0,783 → **média 0,80 ± 0,022**. O resultado é estável e não depende de um split específico. O pré-processamento é reajustado dentro de cada fold (sem vazamento de dados de validação).
+Feita **apenas no conjunto de treino** (5.634 clientes), com os mesmos folds (`random_state=1109`) para todos os modelos, deixando o conjunto de teste reservado para a avaliação final. O pré-processamento é reajustado dentro de cada fold (sem vazamento de dados de validação).
+
+Campeão: recall **0,805 ± 0,027**, F1 0,628 ± 0,020, ROC-AUC 0,845 ± 0,013, PR-AUC 0,651 ± 0,017. O resultado é estável e não depende de um split específico.
 
 ### 5.3 Comparação com outros modelos testados
 
-Todos os modelos usam o mesmo pré-processamento (`Pipeline`). Detalhes em [`model_comparison.ipynb`](../notebooks/model_comparison.ipynb).
+Todos os modelos usam o mesmo pré-processamento (`Pipeline`) e foram avaliados nos mesmos 5 folds. Recall, precision e F1 usam o limiar 0,5. ROC-AUC e PR-AUC não dependem de limiar e medem a capacidade de **ordenar** os clientes por risco, o que torna a comparação justa entre modelos balanceados de formas diferentes. Detalhes e curvas ROC/PR em [`model_comparison.ipynb`](../notebooks/model_comparison.ipynb); resultados gravados em `models/cv_results.csv`.
 
-| Modelo | Recall (churn) | Precision (churn) | F1 (churn) | Acurácia |
-|---|---|---|---|---|
-| **Regressão Logística (balanced)** ✅ | **0,79** | 0,52 | 0,63 | 0,75 |
-| Regressão Logística (sem balanceamento)* | 0,55 | 0,67 | 0,60 | 0,81 |
-| Random Forest (balanced) | 0,64 | 0,56 | 0,60 | 0,77 |
-| Árvore de Decisão (balanced) | 0,54 | 0,50 | 0,52 | 0,73 |
-| MLP (sem balanceamento) | 0,50 | 0,60 | 0,54 | 0,78 |
-| MLP (sample_weight balanced) | 0,69 | 0,50 | 0,58 | 0,73 |
-| MLP (SMOTE) | 0,57 | 0,53 | 0,55 | 0,75 |
+| Modelo (CV, média ± desvio) | Recall | Precision | F1 | ROC-AUC | PR-AUC |
+|---|---|---|---|---|---|
+| **Regressão Logística (balanced)** ✅ | **0,805 ± 0,027** | 0,515 ± 0,026 | **0,628 ± 0,020** | **0,845 ± 0,013** | 0,651 ± 0,017 |
+| Regressão Logística (sem balanceamento) | 0,547 ± 0,022 | 0,640 ± 0,027 | 0,590 ± 0,018 | **0,845 ± 0,013** | **0,654 ± 0,016** |
+| Random Forest (balanced) | 0,637 ± 0,012 | 0,568 ± 0,021 | 0,600 ± 0,011 | 0,826 ± 0,009 | 0,618 ± 0,023 |
+| Árvore de Decisão (balanced) | 0,492 ± 0,013 | 0,506 ± 0,031 | 0,498 ± 0,013 | 0,658 ± 0,010 | 0,383 ± 0,014 |
+| MLP (sem balanceamento) | 0,512 ± 0,045 | 0,581 ± 0,034 | 0,542 ± 0,026 | 0,797 ± 0,013 | 0,563 ± 0,028 |
+| MLP (sample_weight balanced) | 0,644 ± 0,041 | 0,510 ± 0,015 | 0,568 ± 0,011 | 0,794 ± 0,012 | 0,543 ± 0,012 |
+| MLP (SMOTE) | 0,599 ± 0,019 | 0,507 ± 0,017 | 0,549 ± 0,011 | 0,779 ± 0,009 | 0,524 ± 0,010 |
 
-\* Baseline da Etapa 1 ([`EDA + Baseline.ipynb`](../notebooks/EDA%20+%20Baseline.ipynb)), com `LabelEncoder`.
+- A Regressão Logística balanceada vence Random Forest, Árvore e as três variações de MLP em **todos os 5 folds** em recall e ROC-AUC (e em PR-AUC, exceto num fold contra o Random Forest). A vantagem não é fruto de um split favorável.
+- As duas versões da Regressão Logística ordenam os clientes igualmente bem (mesmo ROC-AUC/PR-AUC). O `class_weight='balanced'` apenas desloca o ponto de operação para um recall maior, que é o que o [ML Canvas](ml_canvas.md) pede.
+- No conjunto de teste, o ranking se mantém: ROC-AUC 0,844 (LR) vs. 0,812 (RF), 0,805 (MLP) e 0,673 (Árvore).
+- Random Forest e MLP usaram hiperparâmetros padrão. Um ajuste poderia reduzir a distância, mas, mesmo com diferença marginal, a preferência seria pelo modelo mais simples e interpretável.
 
 ### 5.4 Sensibilidade ao limiar de decisão
 
