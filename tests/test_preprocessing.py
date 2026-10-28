@@ -1,5 +1,8 @@
 import sys
-sys.path.append('src')
+from pathlib import Path
+
+RAIZ_PROJETO = Path(__file__).resolve().parent.parent
+sys.path.append(str(RAIZ_PROJETO / 'src'))
 
 import pandas as pd
 from preprocessing import tratar_total_charges, preparar_features

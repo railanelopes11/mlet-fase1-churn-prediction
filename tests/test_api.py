@@ -1,5 +1,8 @@
 import sys
-sys.path.append('src')
+from pathlib import Path
+
+RAIZ_PROJETO = Path(__file__).resolve().parent.parent
+sys.path.append(str(RAIZ_PROJETO / 'src'))
 
 from fastapi.testclient import TestClient
 
@@ -45,11 +48,11 @@ def test_predict_bate_com_modelo_direto():
     from predict import carregar_modelo, prever_churn
     from preprocessing import carregar_dados, preparar_features, tratar_total_charges
 
-    df = tratar_total_charges(carregar_dados('data/Telco-Customer-Churn.csv')).head(200)
+    df = tratar_total_charges(carregar_dados(RAIZ_PROJETO / 'data' / 'Telco-Customer-Churn.csv')).head(200)
     features = preparar_features(df)
     esperado = prever_churn(
         features.drop(columns=['Churn']),
-        carregar_modelo('models/churn_pipeline.pkl'),
+        carregar_modelo(RAIZ_PROJETO / 'models' / 'churn_pipeline.pkl'),
     )
 
     payload = df.drop(columns=['Churn']).to_dict(orient='records')
