@@ -16,13 +16,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
 from preprocessing import carregar_dados, tratar_total_charges, preparar_features
-from pipeline import construir_pipeline
+from pipeline import LIMIAR_CHURN, construir_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 DIR_DATA = ROOT / 'data'
 DIR_MODELS = ROOT / 'models'
 SEED = 1109  # para reprodutibilidade
-THRESHOLD = 0.5  # para classificação binária
 
 def main():
     df = carregar_dados(DIR_DATA / 'Telco-Customer-Churn.csv')
@@ -41,7 +40,7 @@ def main():
     pipeline.fit(X_train, y_train)
     
     prob = pipeline.predict_proba(X_test)[:, 1]
-    pred = (prob >= THRESHOLD).astype(int)
+    pred = (prob >= LIMIAR_CHURN).astype(int)
     
     print(classification_report(y_test, pred))
     metrics = {
@@ -49,7 +48,7 @@ def main():
         'precision': precision_score(y_test, pred),
         'f1': f1_score(y_test, pred),
         'roc_auc': roc_auc_score(y_test, prob),
-        'threshold': THRESHOLD,
+        'threshold': LIMIAR_CHURN,
         'n_train': len(X_train),
         'n_test': len(X_test)
     }

@@ -8,6 +8,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+# Limiar de decisão: usado no treino (métricas em models/metrics.json) e na API
+LIMIAR_CHURN = 0.5
+
 COLUNAS_NUMERICAS = ['tenure', 'MonthlyCharges', 'TotalCharges']
 COLUNAS_JA_BINARIAS = ['SeniorCitizen']  # já vem como 0/1 no CSV
 COLUNAS_CATEGORICAS = [

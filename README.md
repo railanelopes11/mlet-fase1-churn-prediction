@@ -211,7 +211,7 @@ Os valores aceitos em cada campo categórico estão na tabela da seção [Exempl
 
 - Com o limiar 0,5, o modelo identifica **cerca de 80% dos clientes que realmente cancelam** (recall 0,79). Em troca, por volta de metade dos clientes marcados como `churn_previsto: true` não cancelaria (precision 0,52). Esse equilíbrio foi escolhido de propósito, porque perder um cliente sem agir custa mais do que fazer um contato a mais.
 - Use `probabilidade_churn` principalmente para **ordenar** os clientes por risco. Como o modelo foi treinado com classes balanceadas, o valor tende a superestimar a probabilidade real de cancelamento.
-- O limiar fica na constante `LIMIAR_CHURN` em `src/api.py`. Diminuir o limiar pega mais clientes que cancelariam, mas aumenta os alarmes falsos. Aumentar o limiar faz o contrário. A tabela de trade-off está no [Model Card](docs/model_card.md#54-sensibilidade-ao-limiar-de-decisão).
+- O limiar fica na constante `LIMIAR_CHURN` em `src/pipeline.py`, usada tanto pelo treino quanto pela API. Ao mudá-lo, rode `python src/train_final_model.py` de novo para atualizar `models/metrics.json`. Diminuir o limiar pega mais clientes que cancelariam, mas aumenta os alarmes falsos. Aumentar o limiar faz o contrário. A tabela de trade-off está no [Model Card](docs/model_card.md#54-sensibilidade-ao-limiar-de-decisão).
 - O resultado deve **apoiar** a decisão do time de retenção, não substituí-la. Limitações e vieses conhecidos (por exemplo, idosos são sinalizados com mais frequência) estão no [Model Card](docs/model_card.md#7-possíveis-vieses-e-análise-de-equidade).
 
 ### Códigos de resposta

@@ -3,32 +3,9 @@ sys.path.append('src')
 
 from fastapi.testclient import TestClient
 
-from api import app
+from api import CLIENTE_EXEMPLO, app
 
 client = TestClient(app)
-
-CLIENTE_EXEMPLO = {
-    'customerID': '7590-VHVEG',
-    'gender': 'Female',
-    'SeniorCitizen': 0,
-    'Partner': 'Yes',
-    'Dependents': 'No',
-    'tenure': 1,
-    'PhoneService': 'No',
-    'MultipleLines': 'No phone service',
-    'InternetService': 'DSL',
-    'OnlineSecurity': 'No',
-    'OnlineBackup': 'Yes',
-    'DeviceProtection': 'No',
-    'TechSupport': 'No',
-    'StreamingTV': 'No',
-    'StreamingMovies': 'No',
-    'Contract': 'Month-to-month',
-    'PaperlessBilling': 'Yes',
-    'PaymentMethod': 'Electronic check',
-    'MonthlyCharges': 29.85,
-    'TotalCharges': 29.85,
-}
 
 
 def test_health():

@@ -12,12 +12,12 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from pipeline import LIMIAR_CHURN
 from predict import carregar_modelo, prever_churn
 from preprocessing import preparar_features, tratar_total_charges
 
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 DIR_MODELOS = RAIZ_PROJETO / 'models'
-LIMIAR_CHURN = 0.5
 
 modelo = carregar_modelo(DIR_MODELOS / 'churn_pipeline.pkl')
 
