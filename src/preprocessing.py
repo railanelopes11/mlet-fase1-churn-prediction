@@ -28,7 +28,7 @@ def preparar_features(df: pd.DataFrame) -> pd.DataFrame:
     o OneHotEncoder do Pipeline cuida delas.
     """
     df = df.copy()
-    df = df.drop(columns=['customerID'])
+    df = df.drop(columns=['customerID'], errors='ignore')
 
     if 'Churn' in df.columns:
         df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0})
