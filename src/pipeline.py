@@ -1,3 +1,9 @@
+"""
+Construção do Pipeline de churn: pré-processamento (escala + encoding) e modelo.
+Mantém o encoding e a escala dentro do Pipeline para que sejam ajustados
+apenas com os dados de treino, evitando vazamento de dados.
+"""
+
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -11,7 +17,9 @@ COLUNAS_CATEGORICAS = [
     'PaperlessBilling', 'PaymentMethod',
 ]
 
+
 def construir_pipeline(estimador) -> Pipeline:
+    """Monta o Pipeline completo, com o pré-processamento seguido do estimador recebido."""
     preprocessador = ColumnTransformer(
         transformers=[
             ('num', StandardScaler(), COLUNAS_NUMERICAS),
