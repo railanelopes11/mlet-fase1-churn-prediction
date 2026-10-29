@@ -11,7 +11,10 @@ import json
 from pathlib import Path
 
 import joblib
-from sklearn.metrics import classification_report, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score, average_precision_score, brier_score_loss, classification_report,
+    f1_score, precision_score, recall_score, roc_auc_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
@@ -47,7 +50,10 @@ def main():
         'recall': recall_score(y_test, pred),
         'precision': precision_score(y_test, pred),
         'f1': f1_score(y_test, pred),
+        'accuracy': accuracy_score(y_test, pred),
         'roc_auc': roc_auc_score(y_test, prob),
+        'pr_auc': average_precision_score(y_test, prob),
+        'brier': brier_score_loss(y_test, prob),
         'threshold': LIMIAR_CHURN,
         'n_train': len(X_train),
         'n_test': len(X_test)

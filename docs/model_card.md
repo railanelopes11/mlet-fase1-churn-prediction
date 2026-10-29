@@ -11,7 +11,7 @@
 | **Pré-processamento** | Correção de `TotalCharges` (texto → numérico, nulos → 0) e remoção de `customerID` ([`src/preprocessing.py`](../src/preprocessing.py)); dentro do `Pipeline` ([`src/pipeline.py`](../src/pipeline.py)): `StandardScaler` em `tenure`, `MonthlyCharges` e `TotalCharges`, `OneHotEncoder` nas 15 colunas categóricas e `SeniorCitizen` (já 0/1) sem transformação. Encoding e escala são ajustados só com os dados de treino |
 | **Artefatos** | `models/churn_pipeline.pkl` (pré-processamento + modelo), `models/metrics.json` (métricas no conjunto de teste) |
 | **Código de treino** | [`src/train_final_model.py`](../src/train_final_model.py) |
-| **Notebooks** | [`EDA + Baseline.ipynb`](../notebooks/EDA%20+%20Baseline.ipynb), [`model_comparison.ipynb`](../notebooks/model_comparison.ipynb) |
+| **Notebooks** | [`EDA + Baseline.ipynb`](../notebooks/EDA%20+%20Baseline.ipynb), [`model_comparison.ipynb`](../notebooks/model_comparison.ipynb), [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb) |
 | **Saída** | Probabilidade de churn (0 a 1); classificado como churn quando a probabilidade é ≥ 0,5 |
 
 ## 2. Uso pretendido
@@ -52,7 +52,7 @@ O custo de um **falso negativo** (cliente cancela sem ser abordado) é maior do 
 | PR-AUC (Average Precision) | 0,66 |
 | Brier score | 0,166 |
 
-Recall, precision, F1 e ROC-AUC são gravados em `models/metrics.json` a cada execução de `src/train_final_model.py`.
+Essas métricas são gravadas em `models/metrics.json` a cada execução de `src/train_final_model.py`. Todos os números desta seção e das seções 5.4, 5.5, 6 e 7 são gerados pelo notebook [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb), que avalia o modelo salvo no mesmo conjunto de teste.
 
 **Matriz de confusão**
 
@@ -83,10 +83,22 @@ Todos os modelos usam o mesmo pré-processamento (`Pipeline`) e foram avaliados 
 | MLP (sample_weight balanced) | 0,644 ± 0,041 | 0,510 ± 0,015 | 0,568 ± 0,011 | 0,794 ± 0,012 | 0,543 ± 0,012 |
 | MLP (SMOTE) | 0,599 ± 0,019 | 0,507 ± 0,017 | 0,549 ± 0,011 | 0,779 ± 0,009 | 0,524 ± 0,010 |
 
-- A Regressão Logística balanceada vence Random Forest, Árvore e as três variações de MLP em **todos os 5 folds** em recall e ROC-AUC (e em PR-AUC, exceto num fold contra o Random Forest). A vantagem não é fruto de um split favorável.
-- As duas versões da Regressão Logística ordenam os clientes igualmente bem (mesmo ROC-AUC/PR-AUC). O `class_weight='balanced'` apenas desloca o ponto de operação para um recall maior, que é o que o [ML Canvas](ml_canvas.md) pede.
-- No conjunto de teste, o ranking se mantém: ROC-AUC 0,844 (LR) vs. 0,812 (RF), 0,805 (MLP) e 0,673 (Árvore).
-- Random Forest e MLP usaram hiperparâmetros padrão. Um ajuste poderia reduzir a distância, mas, mesmo com diferença marginal, a preferência seria pelo modelo mais simples e interpretável.
+A tabela acima usa os hiperparâmetros padrão do scikit-learn. Com eles, a Regressão Logística balanceada vence Random Forest, Árvore e as três variações de MLP em todos os 5 folds em recall e ROC-AUC. As duas versões da Regressão Logística ordenam os clientes igualmente bem (mesmo ROC-AUC/PR-AUC): o `class_weight='balanced'` apenas desloca o ponto de operação para um recall maior, que é o que o [ML Canvas](ml_canvas.md) pede.
+
+#### Ajuste de hiperparâmetros (GridSearchCV com validação cruzada aninhada)
+
+Para uma comparação justa, cada modelo passou por uma busca em grade otimizando PR-AUC, dentro de uma validação cruzada aninhada: cada um dos 5 folds externos (os mesmos da tabela anterior) roda sua própria busca em 3 folds internos, e só o fold externo mede o desempenho. Assim a estimativa não fica otimista por ter escolhido os hiperparâmetros nos mesmos dados. Resultados em `models/tuning_results.csv`.
+
+| Modelo ajustado (CV aninhada) | Recall | F1 | ROC-AUC | PR-AUC | Hiperparâmetros finais |
+|---|---|---|---|---|---|
+| **Regressão Logística (balanced)** | 0,800 ± 0,028 | 0,625 ± 0,022 | 0,844 ± 0,014 | 0,653 ± 0,017 | `C=0.1`, L1 |
+| Random Forest (balanced) | 0,790 ± 0,019 | 0,637 ± 0,020 | 0,847 ± 0,011 | 0,659 ± 0,023 | `max_depth=10`, `max_features=0.5`, `min_samples_leaf=20` |
+| Árvore de Decisão (balanced) | 0,809 ± 0,040 | 0,627 ± 0,029 | 0,828 ± 0,013 | 0,623 ± 0,025 | `max_depth=8`, `min_samples_leaf=50` |
+| MLP (sample_weight balanced) | 0,788 ± 0,029 | 0,623 ± 0,017 | 0,844 ± 0,013 | 0,653 ± 0,021 | `hidden_layer_sizes=(16,)`, `alpha=1` |
+
+- O ajuste melhora bastante os modelos que estavam mal regularizados (a Árvore sobe de 0,66 para 0,83 de ROC-AUC) e **empata** Random Forest e MLP com a Regressão Logística: as diferenças de ROC-AUC e PR-AUC (≤ 0,006) são menores que o desvio entre folds, e as vitórias se dividem entre os folds. No conjunto de teste: ROC-AUC 0,843 (LR), 0,846 (RF), 0,844 (MLP) e 0,832 (Árvore).
+- O ajuste não melhora a própria Regressão Logística (ROC-AUC 0,844 vs. 0,845), por isso o modelo em produção mantém a configuração padrão (`C=1`, L2).
+- **Escolha do campeão:** com desempenho estatisticamente equivalente, vale a regra do 1 desvio-padrão: preferir o modelo mais simples. A Regressão Logística é interpretável (os coeficientes explicam o risco e permitem auditar vieses, seção 7), mais leve para servir na API e não depende de ajuste fino.
 
 ### 5.4 Sensibilidade ao limiar de decisão
 
@@ -113,11 +125,11 @@ Coeficientes da regressão logística após o pré-processamento (numéricas pad
 | `InternetService = DSL` | −0,32 | DSL associado a menor risco |
 | `OnlineSecurity = Yes` | −0,28 | Ter segurança online reduz o risco |
 | `InternetService = Fiber optic` | +0,28 | Fibra associada a maior risco |
+| `PhoneService = Yes` | −0,27 | Ter serviço de telefone associado a menor risco |
 | `SeniorCitizen` | +0,26 | Idosos têm risco maior (ver seção 7) |
 | `PaymentMethod = Electronic check` | +0,24 | Cheque eletrônico associado a maior risco |
-| `TechSupport = Yes` | −0,21 | Ter suporte técnico reduz o risco |
 
-`gender` tem coeficientes quase iguais para as duas categorias (−0,076 e −0,074): a diferença entre homens e mulheres é de ≈ 0,002, ou seja, praticamente sem influência. Os coeficientes são exibidos no final de [`model_comparison.ipynb`](../notebooks/model_comparison.ipynb).
+`gender` tem coeficientes quase iguais para as duas categorias (−0,076 e −0,074): a diferença entre homens e mulheres é de ≈ 0,002, ou seja, praticamente sem influência. Os coeficientes são calculados em [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb).
 
 ## 6. Limitações
 
@@ -131,7 +143,7 @@ Coeficientes da regressão logística após o pré-processamento (numéricas pad
 
 ## 7. Possíveis vieses e análise de equidade
 
-Métricas no conjunto de teste por grupo (limiar 0,5). *FPR = taxa de falsos positivos (clientes que não cancelariam, mas foram sinalizados).*
+Métricas no conjunto de teste por grupo (limiar 0,5), calculadas em [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb). *FPR = taxa de falsos positivos (clientes que não cancelariam, mas foram sinalizados).*
 
 | Grupo | n | Churn real | % sinalizado | Recall | Precision | FPR | ROC-AUC |
 |---|---|---|---|---|---|---|---|
@@ -160,5 +172,5 @@ Métricas no conjunto de teste por grupo (limiar 0,5). *FPR = taxa de falsos pos
 - Usar o modelo como **ferramenta de priorização**, com revisão humana das ações de retenção.
 - Garantir que a ação disparada pelo modelo seja **benéfica ao cliente** (oferta, suporte), nunca punitiva.
 - Monitorar periodicamente recall/precision **por segmento** (idade, contrato, pagamento), não só no agregado.
-- Próximas melhorias: calibração de probabilidades (`CalibratedClassifierCV`), avaliar remoção de atributos sensíveis, tuning de hiperparâmetros e ajuste do limiar conforme o custo real das ações.
+- Próximas melhorias: calibração de probabilidades (`CalibratedClassifierCV`), avaliar remoção de atributos sensíveis e ajuste do limiar conforme o custo real das ações.
 - Retreinar o modelo quando houver dados reais ou drift detectado.
