@@ -187,7 +187,7 @@ São os mesmos campos do CSV original, sem a coluna `Churn` (que é o que querem
 | `SeniorCitizen` | 0 ou 1 | 1 se o cliente é idoso |
 | `Partner` | texto | Se tem parceiro(a) |
 | `Dependents` | texto | Se tem dependentes |
-| `tenure` | inteiro ≥ 0 | Meses como cliente da operadora |
+| `tenure` | inteiro de 0 a 120 | Meses como cliente da operadora |
 | `PhoneService` | texto | Se tem serviço de telefone |
 | `MultipleLines` | texto | Se tem múltiplas linhas |
 | `InternetService` | texto | Tipo de internet (DSL, fibra ou nenhuma) |
@@ -197,7 +197,7 @@ São os mesmos campos do CSV original, sem a coluna `Churn` (que é o que querem
 | `PaperlessBilling` | texto | Se usa fatura digital |
 | `PaymentMethod` | texto | Forma de pagamento |
 | `MonthlyCharges` | número ≥ 0 | Valor da mensalidade |
-| `TotalCharges` | número ≥ 0 ou vazio | Total já cobrado. Vazio/nulo vira 0 (clientes recém-chegados) |
+| `TotalCharges` | número ≥ 0 ou vazio | Total já cobrado. Só pode ser vazio/nulo com `tenure = 0` (clientes recém-chegados), caso em que vira 0. Com `tenure > 0`, deve ser maior que 0 |
 
 Os valores aceitos em cada campo categórico estão na tabela da seção [Exemplos de uso da API](#exemplos-de-uso-da-api).
 
@@ -222,7 +222,7 @@ Os valores aceitos em cada campo categórico estão na tabela da seção [Exempl
 | Código | Quando acontece |
 |---|---|
 | `200` | Predição feita com sucesso |
-| `422` | Requisição inválida: campo obrigatório faltando, tipo errado, valor fora das categorias aceitas, número negativo ou lista vazia. A resposta explica qual campo está com problema |
+| `422` | Requisição inválida: campo obrigatório faltando, tipo errado, valor fora das categorias aceitas, número fora da faixa, combinação inconsistente de campos ou lista vazia. A resposta explica qual campo está com problema |
 
 ## Rodando a API localmente
 
@@ -252,7 +252,7 @@ curl http://127.0.0.1:8000/health
 
 ### Predição
 
-O corpo da requisição pode ser **um cliente** (objeto JSON, a resposta vem como objeto) ou **uma lista de clientes** (a resposta vem como lista), com os mesmos campos do CSV original (sem a coluna `Churn`). O campo `customerID` é opcional. `TotalCharges` também pode vir vazio ou nulo (clientes recém-chegados) e é tratado como 0, assim como no treino.
+O corpo da requisição pode ser **um cliente** (objeto JSON, a resposta vem como objeto) ou **uma lista de clientes** (a resposta vem como lista), com os mesmos campos do CSV original (sem a coluna `Churn`). O campo `customerID` é opcional. `TotalCharges` pode vir vazio ou nulo apenas para clientes com `tenure = 0` e é tratado como 0, assim como no treino.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
@@ -331,6 +331,16 @@ print(requests.post("http://127.0.0.1:8000/predict", json=[cliente, cliente]).js
 | `PaymentMethod` | `Electronic check`, `Mailed check`, `Bank transfer (automatic)`, `Credit card (automatic)` |
 
 Valores fora dessa lista retornam **HTTP 422** com a descrição do erro.
+
+**Combinações rejeitadas (também HTTP 422):** a API recusa dados que não fazem sentido, em vez de devolver um risco errado.
+
+| Regra | Exemplo rejeitado |
+|---|---|
+| Com `tenure > 0`, `TotalCharges` deve ser informado e maior que 0 | `tenure: 60` com `TotalCharges` nulo, ausente ou 0 |
+| `MultipleLines` é `No phone service` se, e somente se, `PhoneService` for `No` | `PhoneService: "Yes"` com `MultipleLines: "No phone service"` |
+| Os seis serviços adicionais são `No internet service` se, e somente se, `InternetService` for `No` | `InternetService: "DSL"` com `TechSupport: "No internet service"` |
+
+Todas as 7.043 linhas do dataset respeitam essas regras, o que é coberto pelo teste `test_validacao_aceita_todas_as_linhas_do_dataset`. O `tenure` aceita até 120 meses, mas o maior valor visto no treino é 72: acima disso, o modelo está extrapolando.
 
 > A `probabilidade_churn` deve ser lida como um **score de risco** para priorização. Como o modelo foi treinado com classes balanceadas, ela tende a superestimar a probabilidade real (ver [Model Card](docs/model_card.md#6-limitações)).
 

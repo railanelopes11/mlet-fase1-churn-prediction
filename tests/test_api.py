@@ -4,9 +4,10 @@ from pathlib import Path
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 sys.path.append(str(RAIZ_PROJETO / 'src'))
 
+import pytest
 from fastapi.testclient import TestClient
 
-from api import CLIENTE_EXEMPLO, app
+from api import CLIENTE_EXEMPLO, SERVICOS_DE_INTERNET, TENURE_MAXIMO, Cliente, app
 
 client = TestClient(app)
 
@@ -42,6 +43,56 @@ def test_predict_aceita_total_charges_vazio():
     cliente = {**CLIENTE_EXEMPLO, 'tenure': 0, 'TotalCharges': ' '}
     resposta = client.post('/predict', json=[cliente])
     assert resposta.status_code == 200
+
+
+def test_predict_aceita_total_charges_ausente_com_tenure_zero():
+    cliente = {k: v for k, v in CLIENTE_EXEMPLO.items() if k != 'TotalCharges'}
+    resposta = client.post('/predict', json={**cliente, 'tenure': 0})
+    assert resposta.status_code == 200
+
+
+@pytest.mark.parametrize(
+    'alteracoes',
+    [
+        {'tenure': 60, 'TotalCharges': None},
+        {'tenure': 60, 'TotalCharges': ' '},
+        {'tenure': 60, 'TotalCharges': 0},
+        {'tenure': TENURE_MAXIMO + 1},
+        {'tenure': -1},
+        {'PhoneService': 'Yes', 'MultipleLines': 'No phone service'},
+        {'PhoneService': 'No', 'MultipleLines': 'Yes'},
+        {'InternetService': 'DSL', 'TechSupport': 'No internet service'},
+        *[{'InternetService': 'No', campo: 'No'} for campo in SERVICOS_DE_INTERNET],
+    ],
+)
+def test_predict_rejeita_dados_inconsistentes(alteracoes):
+    resposta = client.post('/predict', json={**CLIENTE_EXEMPLO, **alteracoes})
+    assert resposta.status_code == 422
+
+
+def test_predict_rejeita_total_charges_ausente_com_tenure_positivo():
+    cliente = {k: v for k, v in CLIENTE_EXEMPLO.items() if k != 'TotalCharges'}
+    resposta = client.post('/predict', json=cliente)
+    assert resposta.status_code == 422
+
+
+def test_predict_erro_explica_o_problema():
+    resposta = client.post('/predict', json={**CLIENTE_EXEMPLO, 'tenure': 60, 'TotalCharges': None})
+    assert 'TotalCharges deve ser informado' in resposta.text
+
+
+def test_predict_aceita_cliente_sem_internet():
+    servicos = {campo: 'No internet service' for campo in SERVICOS_DE_INTERNET}
+    resposta = client.post('/predict', json={**CLIENTE_EXEMPLO, 'InternetService': 'No', **servicos})
+    assert resposta.status_code == 200
+
+
+def test_validacao_aceita_todas_as_linhas_do_dataset():
+    from preprocessing import carregar_dados, tratar_total_charges
+
+    df = tratar_total_charges(carregar_dados(RAIZ_PROJETO / 'data' / 'Telco-Customer-Churn.csv'))
+    for linha in df.drop(columns=['Churn']).to_dict(orient='records'):
+        Cliente(**linha)
 
 
 def test_predict_bate_com_modelo_direto():

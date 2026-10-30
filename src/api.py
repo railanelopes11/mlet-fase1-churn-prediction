@@ -10,7 +10,7 @@ from typing import Literal
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from pipeline import LIMIAR_CHURN
 from predict import carregar_modelo, prever_churn
@@ -23,6 +23,12 @@ modelo = carregar_modelo(DIR_MODELOS / 'churn_pipeline.pkl')
 
 SimNao = Literal['Yes', 'No']
 SimNaoSemInternet = Literal['Yes', 'No', 'No internet service']
+
+TENURE_MAXIMO = 120  # 10 anos; o maior valor no treino é 72 meses
+SERVICOS_DE_INTERNET = [
+    'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+    'TechSupport', 'StreamingTV', 'StreamingMovies',
+]
 
 CLIENTE_EXEMPLO = {
     'customerID': '7590-VHVEG',
@@ -56,7 +62,7 @@ class Cliente(BaseModel):
     SeniorCitizen: Literal[0, 1]
     Partner: SimNao
     Dependents: SimNao
-    tenure: int = Field(ge=0, examples=[1])
+    tenure: int = Field(ge=0, le=TENURE_MAXIMO, examples=[1])
     PhoneService: SimNao
     MultipleLines: Literal['Yes', 'No', 'No phone service']
     InternetService: Literal['DSL', 'Fiber optic', 'No']
@@ -79,7 +85,7 @@ class Cliente(BaseModel):
         default=None,
         ge=0,
         examples=[29.85],
-        description='Vazio/nulo para clientes sem ciclo de cobrança completo (tratado como 0).',
+        description='Vazio/nulo apenas para clientes com tenure = 0 (tratado como 0).',
     )
 
     model_config = ConfigDict(json_schema_extra={'examples': [CLIENTE_EXEMPLO]})
@@ -90,6 +96,19 @@ class Cliente(BaseModel):
         if isinstance(valor, str) and not valor.strip():
             return None
         return valor
+
+    @model_validator(mode='after')
+    def verificar_consistencia(self):
+        """Rejeita combinações que não existem nos dados, em vez de gerar um risco sem sentido."""
+        if self.tenure > 0 and not self.TotalCharges:
+            raise ValueError('TotalCharges deve ser informado e maior que 0 quando tenure > 0.')
+        if (self.PhoneService == 'No') != (self.MultipleLines == 'No phone service'):
+            raise ValueError("MultipleLines deve ser 'No phone service' se, e somente se, PhoneService for 'No'.")
+        sem_internet = self.InternetService == 'No'
+        for campo in SERVICOS_DE_INTERNET:
+            if sem_internet != (getattr(self, campo) == 'No internet service'):
+                raise ValueError(f"{campo} deve ser 'No internet service' se, e somente se, InternetService for 'No'.")
+        return self
 
 
 class Predicao(BaseModel):
