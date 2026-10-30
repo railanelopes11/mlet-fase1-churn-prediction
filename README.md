@@ -21,7 +21,7 @@ Pipeline de Machine Learning para prever quais clientes de uma operadora de tele
 
 A operadora está perdendo clientes em ritmo acelerado. O objetivo é identificar com antecedência os clientes com maior risco de cancelamento para que o time de retenção atue antes da saída (desconto, upgrade, suporte).
 
-Como **deixar de identificar um cliente que vai cancelar (falso negativo)** custa mais caro do que abordar um cliente que não cancelaria (falso positivo), a métrica principal escolhida é o **recall da classe churn**. Detalhes em [`docs/ml_canvas.md`](docs/ml_canvas.md).
+Como **deixar de identificar um cliente que vai cancelar (falso negativo)** custa mais caro do que abordar um cliente que não cancelaria (falso positivo), a métrica técnica principal é o **recall da classe churn**. O sucesso do projeto é medido pelos KPIs de negócio: a **taxa de churn mensal** e a **receita mensal perdida com churn**. Detalhes em [`docs/ml_canvas.md`](docs/ml_canvas.md).
 
 **Dataset:** [Telco Customer Churn (IBM, via Kaggle)](https://www.kaggle.com/datasets/blastchar/telco-customer-churn): 7.043 clientes, 21 colunas, 26,5% de churn.
 
@@ -38,6 +38,8 @@ Modelo campeão: **Regressão Logística com `class_weight='balanced'`**, dentro
 | ROC-AUC | 0,84 |
 | Recall em validação cruzada (5-fold, treino) | 0,805 ± 0,027 |
 
+**Em termos de negócio:** no conjunto de teste, os clientes sinalizados concentram **83,3% da receita mensal em risco**, e a lista tem quase o dobro de clientes em risco de uma lista aleatória (lift de 1,95). Isso é uma estimativa de potencial: a receita de fato preservada depende da eficácia das ações de retenção ([Model Card, seção 5.6](docs/model_card.md#56-impacto-de-negócio)).
+
 Também foram testados Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo pré-processamento e avaliados nos mesmos 5 folds de validação cruzada. Depois do ajuste de hiperparâmetros (`GridSearchCV` com validação cruzada aninhada), Random Forest e MLP empatam com a regressão logística em ROC-AUC e PR-AUC, e nenhum a supera. Com desempenho equivalente, a regressão logística foi escolhida por ser o modelo mais simples, interpretável e leve para servir na API. As métricas do conjunto de teste ficam gravadas em `models/metrics.json`, a validação cruzada de todos os modelos em `models/cv_results.csv` e a comparação padrão vs. ajustado em `models/tuning_results.csv`. Performance completa, limitações e análise de vieses estão no **[Model Card](docs/model_card.md)**.
 
 ## Estrutura do projeto
@@ -47,7 +49,7 @@ mlet-fase1-churn-prediction/
 ├── data/
 │   └── Telco-Customer-Churn.csv     # dataset bruto
 ├── docs/
-│   ├── ml_canvas.md                 # ML Canvas (contexto de negócio e métricas)
+│   ├── ml_canvas.md                 # ML Canvas (negócio, dados, métricas e monitoramento)
 │   └── model_card.md                # Model Card (performance, limitações, vieses)
 ├── models/
 │   ├── churn_pipeline.pkl           # Pipeline treinado (pré-processamento + LogisticRegression)
@@ -374,9 +376,9 @@ jupyter lab
 
 - **`notebooks/EDA + Baseline.ipynb`**: análise exploratória (tratamento de `TotalCharges`, taxas de churn por variável, correlações) e baseline com regressão logística.
 - **`notebooks/model_comparison.ipynb`**: comparação entre Regressão Logística, Random Forest, Árvore de Decisão e MLP (sem balanceamento, com sample_weight e com SMOTE), todos com o mesmo `Pipeline` de pré-processamento, validação cruzada de todos os modelos (recall, precision, F1, ROC-AUC e PR-AUC), curvas ROC/Precisão-Revocação no conjunto de teste e ajuste de hiperparâmetros com `GridSearchCV` e validação cruzada aninhada.
-- **`notebooks/model_evaluation.ipynb`**: avaliação do modelo final salvo no conjunto de teste, gerando os números do Model Card (métricas, matriz de confusão, sensibilidade ao limiar, coeficientes, calibração e desempenho por segmento e por grupo).
+- **`notebooks/model_evaluation.ipynb`**: avaliação do modelo final salvo no conjunto de teste, gerando os números do Model Card (métricas, matriz de confusão, sensibilidade ao limiar, coeficientes, calibração, desempenho por segmento e por grupo e impacto de negócio).
 
 ## Documentação
 
-- [ML Canvas](docs/ml_canvas.md): contexto de negócio, stakeholders, custos de erro e métricas.
+- [ML Canvas](docs/ml_canvas.md): contexto de negócio, stakeholders, dados, custos de erro, métricas técnica e de negócio, retreino e monitoramento.
 - [Model Card](docs/model_card.md): performance, limitações e possíveis vieses do modelo.

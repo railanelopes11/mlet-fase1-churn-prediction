@@ -52,7 +52,7 @@ O custo de um **falso negativo** (cliente cancela sem ser abordado) é maior do 
 | PR-AUC (Average Precision) | 0,66 |
 | Brier score | 0,166 |
 
-Essas métricas são gravadas em `models/metrics.json` a cada execução de `src/train_final_model.py`. Todos os números desta seção e das seções 5.4, 5.5, 6 e 7 são gerados pelo notebook [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb), que avalia o modelo salvo no mesmo conjunto de teste.
+Essas métricas são gravadas em `models/metrics.json` a cada execução de `src/train_final_model.py`. Todos os números desta seção e das seções 5.4, 5.5, 5.6, 6 e 7 são gerados pelo notebook [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb), que avalia o modelo salvo no mesmo conjunto de teste.
 
 **Matriz de confusão**
 
@@ -130,6 +130,32 @@ Coeficientes da regressão logística após o pré-processamento (numéricas pad
 | `PaymentMethod = Electronic check` | +0,24 | Cheque eletrônico associado a maior risco |
 
 `gender` tem coeficientes quase iguais para as duas categorias (−0,076 e −0,074): a diferença entre homens e mulheres é de ≈ 0,002, ou seja, praticamente sem influência. Os coeficientes são calculados em [`model_evaluation.ipynb`](../notebooks/model_evaluation.ipynb).
+
+### 5.6 Impacto de negócio
+
+Considerando um mês de mensalidade (`MonthlyCharges`, em dólares) no conjunto de teste, a receita em risco é de 27.747 por mês, de 374 clientes que cancelam. Como o modelo tende a identificar os clientes que pagam mais, a receita detectada é proporcionalmente maior que o recall: **83,3% da receita em risco** contra 79,4% dos clientes. A lista de clientes sinalizados tem **lift de 1,95** sobre uma lista aleatória, e contatar só os 20% de maior risco alcança 52,4% dos cancelamentos e 57,5% da receita em risco.
+
+| Limiar | Clientes sinalizados | Churners detectados | Receita detectada | % da receita em risco | Lift |
+|---|---|---|---|---|---|
+| 0,3 | 818 | 347 | 25.952 | 93,5% | 1,60 |
+| 0,4 | 700 | 320 | 24.514 | 88,4% | 1,72 |
+| **0,5 (padrão)** | **573** | **297** | **23.125** | **83,3%** | **1,95** |
+| 0,6 | 475 | 268 | 20.991 | 75,7% | 2,13 |
+| 0,7 | 349 | 220 | 17.709 | 63,8% | 2,37 |
+
+**Simulação com premissas hipotéticas.** O dataset não informa o custo nem a eficácia das ações de retenção. Supondo, só como ilustração, que 20% dos clientes em risco abordados desistam de cancelar e que cada contato custe 5:
+
+| Cenário | Clientes contatados | Receita preservada | Custo | Valor líquido no mês |
+|---|---|---|---|---|
+| Contatar toda a base | 1.409 | 5.549 | 7.045 | −1.496 |
+| Modelo, limiar 0,3 | 818 | 5.190 | 4.090 | +1.100 |
+| **Modelo, limiar 0,5** | **573** | **4.625** | **2.865** | **+1.760** |
+| Modelo, limiar 0,6 | 475 | 4.198 | 2.375 | +1.823 |
+| Modelo, limiar 0,7 | 349 | 3.542 | 1.745 | +1.797 |
+
+Nessas premissas, usar o modelo é melhor que contatar todos, e os limiares de 0,5 a 0,7 ficam próximos. O limiar 0,5 foi mantido porque prioriza o recall. A simulação conta só um mês de receita, o que é conservador para um cliente que permanece por mais tempo. No limiar 0,5, a ação se paga enquanto o custo por contato ficar abaixo de 4,04 (com sucesso de 10%), 8,07 (com 20%) ou 12,11 (com 30%). **Esses resultados não são medições:** com os valores reais da operadora, a conta e o melhor limiar podem mudar.
+
+Os KPIs do projeto, como a taxa de churn mensal, só podem ser medidos com o modelo em uso e um grupo de controle (ver [ML Canvas](ml_canvas.md#métricas-de-negócio)).
 
 ## 6. Limitações
 
