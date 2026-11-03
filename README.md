@@ -2,6 +2,8 @@
 
 Pipeline de Machine Learning para prever quais clientes de uma operadora de telecomunicações têm maior risco de cancelar o serviço (*churn*), permitindo ações de retenção proativas. O modelo final é servido por uma API REST construída com **FastAPI**.
 
+> 🎬 **Vídeo de apresentação (método STAR, 5 min):** [assistir no Google Drive](https://drive.google.com/drive/folders/1la1N0aIUvEhLdZFTE2vXbmuAbXps5DPR?hl=pt-br)
+
 ## Sumário
 
 - [Problema de negócio](#problema-de-negócio)
